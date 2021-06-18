@@ -8,15 +8,33 @@ def line_parser(row):
     inner_text = row[row.find("<text"):row.find("</text>")]
     outlinks = re.findall("\\[\\[(.*?)\\]\\]", inner_text)
     ret_outlinks = []
+
     for item in outlinks:
-        a,b = item.split("|")
-        ret_outlinks.append(a)
+        item_splitted = item.split("|")
+        if len(item_splitted) < 2:
+            ret_outlinks.append(item)
+            continue
+        ret_outlinks.append(item_splitted[0])
     return title_page, ret_outlinks
+
+
+def rank_calculator(row):
+    title_page = row[0]
+    outlinks = row[1][0]
+    pagerank = row[1][1]
+    outlinks_size = len(outlinks)
+    return_list = []
+    if outlinks_size > 0:
+        pagerank_contr = pagerank/outlinks_size
+        for outlink in outlinks:
+            return_list.append([outlink, pagerank_contr])
+    return_list.append([title_page, 0])
+    return return_list
 
 
 if __name__ == "__main__":
 
-    if len(sys.argv) != 4:
+    if len(sys.argv) != 5:
         print("Follow this sample: <Iteration> <Alpha> <Input Path> <Output Path>")
         sys.exit(-1)
     sc = SparkContext("local", "PageRank")
@@ -28,4 +46,19 @@ if __name__ == "__main__":
     input_data = sc.textFile(input_path).cache()
     total_node = input_data.count()
     rows = input_data.map(lambda row: line_parser(row))
-    rows.collect()
+
+    initial_pagerank = rows.mapValues(lambda rank: 1/total_node)
+
+    parse_output = rows.join(initial_pagerank)
+
+    print(parse_output.collect())
+    for i in range(iteration):
+        pagerank_contribution = parse_output.flatMap(lambda row: rank_calculator(row))
+
+        print(pagerank_contribution.collect())
+
+#        total_PR = pagerank_contribution.reduceByKey(add)
+
+#       pagerank_contribution = rows.join(total_PR)
+
+#    print(pagerank_contribution.collect())
