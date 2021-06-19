@@ -31,6 +31,12 @@ def rank_calculator(row):
     return_list.append([title_page, 0])
     return return_list
 
+def pr_calculator(row, alpha, total_node):
+
+    final_pr = ((alpha/total_node)+((1-alpha)*row))
+    return final_pr
+
+
 
 if __name__ == "__main__":
 
@@ -45,20 +51,20 @@ if __name__ == "__main__":
 
     input_data = sc.textFile(input_path).cache()
     total_node = input_data.count()
-    rows = input_data.map(lambda row: line_parser(row))
+    print(total_node)
+    rows = input_data.map(lambda row: line_parser(row)).cache()
 
-    initial_pagerank = rows.mapValues(lambda rank: 1/total_node)
 
-    parse_output = rows.join(initial_pagerank)
+    pagerank = rows.mapValues(lambda rank: 1/total_node)
 
-    print(parse_output.collect())
+
     for i in range(iteration):
+        parse_output = rows.join(pagerank)
         pagerank_contribution = parse_output.flatMap(lambda row: rank_calculator(row))
 
-        print(pagerank_contribution.collect())
+        total_PR = pagerank_contribution.reduceByKey(add)
 
-#        total_PR = pagerank_contribution.reduceByKey(add)
+        pagerank = total_PR.mapValues(lambda row: pr_calculator(row, alpha, total_node))
 
-#       pagerank_contribution = rows.join(total_PR)
-
-#    print(pagerank_contribution.collect())
+    rank_output = pagerank.sortBy(lambda row: row[1], False)
+    rank_output.saveAsTextFile(output_path)
