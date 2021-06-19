@@ -43,20 +43,23 @@ if __name__ == "__main__":
     if len(sys.argv) != 5:
         print("Follow this sample: <Iteration> <Alpha> <Input Path> <Output Path>")
         sys.exit(-1)
-    sc = SparkContext("local", "PageRank")
+
+    # Get Spark Context
+    sc = SparkContext("yarn", "PageRank")
+
     iteration = int(sys.argv[1])
     alpha = float(sys.argv[2])
     input_path = sys.argv[3]
     output_path = sys.argv[4]
 
+    # Get the input data from text file and put these in rdd
     input_data = sc.textFile(input_path).cache()
+    # Save the total number of nodes
     total_node = input_data.count()
-    print(total_node)
+
     rows = input_data.map(lambda row: line_parser(row)).cache()
 
-
     pagerank = rows.mapValues(lambda rank: 1/total_node)
-
 
     for i in range(iteration):
         parse_output = rows.join(pagerank)
