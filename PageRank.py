@@ -45,7 +45,7 @@ if __name__ == "__main__":
         sys.exit(-1)
 
     # Get Spark Context
-    sc = SparkContext("yarn", "PageRank")
+    sc = SparkContext("local", "PageRank")
 
     iteration = int(sys.argv[1])
     alpha = float(sys.argv[2])
@@ -59,10 +59,19 @@ if __name__ == "__main__":
 
     rows = input_data.map(lambda row: line_parser(row)).cache()
 
+    print(rows.collect())
+    print("rows")
+
     pagerank = rows.mapValues(lambda rank: 1/total_node)
+
+
 
     for i in range(iteration):
         parse_output = rows.join(pagerank)
+
+        print(parse_output.collect())
+        print("parse_output")
+
         pagerank_contribution = parse_output.flatMap(lambda row: rank_calculator(row))
 
         total_PR = pagerank_contribution.reduceByKey(add)
